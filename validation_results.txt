@@ -1,0 +1,11 @@
+[0;34m
+╔═══════════════════════════════════════════════════════════════════╗
+║                                                                   ║
+║   Purple Team AD Lab - Validation & Testing                      ║
+║                                                                   ║
+╚═══════════════════════════════════════════════════════════════════╝
+[0m
+[0;34m[*][0m Running pre-flight checks...
+
+[0;34m[*][0m 1. Validating project structure...
+[0;32m[✓][0m Directory exists: attack-scripts
