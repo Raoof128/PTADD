@@ -1,0 +1,193 @@
+# Purple Team AD Lab - Git Ignore Configuration
+
+# ============================================================================
+# Sensitive Data - NEVER COMMIT
+# ============================================================================
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+credentials.txt
+passwords.txt
+hashes.txt
+*.kirbi
+*.ccache
+ntds.dit
+*.dmp
+lsass.dmp
+
+# Environment and secrets
+.env
+.env.local
+secrets/
+private/
+
+# ============================================================================
+# Attack Output and Evidence
+# ============================================================================
+results/attack-evidence/*.png
+results/attack-evidence/*.jpg
+results/attack-evidence/*.txt
+results/detection-screenshots/*.png
+results/logs/*.log
+results/logs/*.evtx
+kerberoast_output/
+attack_output/
+*.tickets
+
+# ============================================================================
+# Docker and Container Data
+# ============================================================================
+docker-compose.override.yml
+.dockerignore
+
+# Docker volumes
+volumes/
+data/
+
+# ============================================================================
+# IDE and Editor Files
+# ============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# ============================================================================
+# Operating System Files
+# ============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ============================================================================
+# Python
+# ============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+venv/
+ENV/
+env/
+
+# ============================================================================
+# PowerShell
+# ============================================================================
+*.ps1xml
+*.psd1
+*.psm1.bak
+
+# ============================================================================
+# Logs and Temporary Files
+# ============================================================================
+*.log
+logs/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*~
+
+# Lab setup logs
+lab-setup/*.log
+setup.log
+
+# ============================================================================
+# Compiled and Binary Files
+# ============================================================================
+*.exe
+*.dll
+*.so
+*.dylib
+*.o
+*.obj
+
+# Exception: Allow specific tool binaries in tools/ directory if needed
+# !tools/bin/*.exe
+
+# ============================================================================
+# Database Files
+# ============================================================================
+*.sqlite
+*.db
+*.mdb
+
+# ============================================================================
+# Archive Files (unless explicitly needed)
+# ============================================================================
+# *.zip
+# *.tar.gz
+# *.rar
+# *.7z
+
+# ============================================================================
+# Testing and Coverage
+# ============================================================================
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+
+# ============================================================================
+# Documentation Build Artifacts
+# ============================================================================
+docs/_build/
+site/
+
+# ============================================================================
+# Keep These Directories (even if empty)
+# ============================================================================
+!results/.gitkeep
+!results/attack-evidence/.gitkeep
+!results/detection-screenshots/.gitkeep
+!results/logs/.gitkeep

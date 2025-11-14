@@ -1,0 +1,78 @@
+MIT License
+
+Copyright (c) 2024 Raouf - Purple Team AD Lab
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+EDUCATIONAL USE DISCLAIMER
+
+This software is provided for educational, research, and authorized security
+testing purposes only. The techniques and tools demonstrated in this project
+must only be used in controlled, isolated environments with explicit
+authorization.
+
+IMPORTANT WARNINGS:
+
+1. LEGAL COMPLIANCE: Unauthorized access to computer systems is illegal in
+   most jurisdictions, including Australia under the Cybercrime Act 2001.
+
+2. AUTHORIZED USE ONLY: All attack techniques must only be executed against
+   systems you own or have explicit written authorization to test.
+
+3. ISOLATED ENVIRONMENT: This lab must be deployed in an isolated environment
+   with no connection to production networks or systems.
+
+4. NO WARRANTY: The authors provide no warranty and accept no liability for
+   any misuse of this software or techniques demonstrated herein.
+
+5. RESPONSIBLE DISCLOSURE: Any vulnerabilities discovered using these tools
+   must be reported responsibly to affected parties.
+
+By using this software, you acknowledge and agree to:
+- Use it only for lawful, authorized purposes
+- Comply with all applicable laws and regulations
+- Accept full responsibility for your actions
+- Indemnify the authors from any liability arising from your use
+
+AUSTRALIAN LEGAL CONTEXT:
+
+Under Australian law (Cybercrime Act 2001, Criminal Code Act 1995):
+- Unauthorized access to data is a criminal offense (penalties up to 10 years)
+- Unauthorized modification of data is illegal
+- Impairment of electronic communications is prohibited
+- Security testing requires explicit authorization from system owners
+
+This project is intended to support defensive cybersecurity training and
+research in alignment with Australian cybersecurity frameworks including:
+- ACSC Essential Eight
+- Information Security Manual (ISM)
+- Privacy Act 1988 compliance principles
+
+ACADEMIC USE:
+
+This project may be used for academic research, coursework, and portfolio
+development. When using this work in academic contexts:
+- Provide appropriate attribution
+- Follow your institution's ethical guidelines
+- Obtain necessary ethics approvals for research involving security testing
+- Ensure compliance with responsible disclosure practices
+
+For questions about licensing or appropriate use, please contact the author.

@@ -1,0 +1,360 @@
+title: Kerberoasting Attack Detection - Service Ticket Request
+id: 8a1b3c4e-5f6a-7d8e-9f0a-1b2c3d4e5f6a
+status: stable
+description: |
+  Detects potential Kerberoasting attacks by identifying suspicious Kerberos service ticket (TGS) requests.
+  Kerberoasting is a post-exploitation attack technique that attempts to crack the password hashes of
+  service accounts by requesting service tickets and performing offline password cracking.
+
+  This rule identifies:
+  - Multiple TGS requests in a short time period
+  - TGS requests using RC4 encryption (weaker than AES, preferred by attackers)
+  - TGS requests for service accounts with weak encryption
+  - Unusual service ticket requests from non-service accounts
+
+references:
+  - https://attack.mitre.org/techniques/T1558/003/
+  - https://adsecurity.org/?p=3458
+  - https://www.harmj0y.net/blog/powershell/kerberoasting-without-mimikatz/
+  - https://github.com/GhostPack/Rubeus
+
+author: Purple Team Lab
+date: 2024/01/14
+modified: 2024/01/14
+
+tags:
+  - attack.credential_access
+  - attack.t1558.003
+  - attack.t1558
+  - mitre.attack.credential_access
+
+logsource:
+  product: windows
+  service: security
+  definition: 'Requirements: Advanced Audit Policy must be enabled for Kerberos authentication events'
+
+detection:
+  # Event ID 4769: Kerberos Service Ticket Request
+  selection_base:
+    EventID: 4769
+    Status: '0x0'  # Success
+    ServiceName: '*$'  # Service accounts typically end with $
+
+  # RC4 encryption (etype 0x17 = 23) - preferred by attackers
+  selection_encryption_weak:
+    TicketEncryptionType: '0x17'
+
+  # Exclude machine accounts and common services
+  filter_legitimate:
+    ServiceName|endswith:
+      - '$'  # Computer accounts
+      - 'krbtgt'  # Kerberos Ticket Granting Ticket service
+    TargetUserName|endswith: '$'  # Machine accounts
+
+  # High-value service accounts (SQL, IIS, etc.)
+  selection_high_value:
+    ServiceName|contains:
+      - 'MSSQLSvc'
+      - 'HTTP'
+      - 'www'
+      - 'ldap'
+      - 'ftp'
+      - 'imap'
+      - 'smtp'
+      - 'exchange'
+
+  condition: selection_base and selection_encryption_weak and not filter_legitimate
+
+fields:
+  - TargetUserName
+  - ServiceName
+  - IpAddress
+  - TicketEncryptionType
+  - TargetDomainName
+  - Status
+
+falsepositives:
+  - Legitimate service account access by authorized users
+  - Legitimate applications requesting service tickets with RC4 encryption
+  - Service discovery and enumeration by system administrators
+  - Automated monitoring tools accessing multiple services
+
+level: high
+
+---
+
+title: Kerberoasting Attack Detection - Multiple Service Ticket Requests
+id: 9b2c3d4e-6f7a-8d9e-0f1a-2b3c4d5e6f7a
+status: experimental
+description: |
+  Detects potential Kerberoasting by identifying users requesting an unusually high number of
+  Kerberos service tickets within a short time period. This is a behavioral detection that
+  identifies mass service ticket requests characteristic of automated Kerberoasting tools.
+
+references:
+  - https://attack.mitre.org/techniques/T1558/003/
+  - https://adsecurity.org/?p=3458
+
+author: Purple Team Lab
+date: 2024/01/14
+
+tags:
+  - attack.credential_access
+  - attack.t1558.003
+
+logsource:
+  product: windows
+  service: security
+
+detection:
+  selection:
+    EventID: 4769
+    Status: '0x0'
+    TicketEncryptionType: '0x17'  # RC4
+
+  filter:
+    ServiceName|endswith:
+      - '$'
+      - 'krbtgt'
+
+  # Correlation: More than 5 unique service ticket requests within 5 minutes
+  timeframe: 5m
+  condition: selection and not filter | count(ServiceName) by TargetUserName > 5
+
+falsepositives:
+  - Service discovery scans
+  - Automated system administration tools
+  - Legitimate user accessing multiple services
+
+level: high
+
+---
+
+title: Kerberoasting Attack Detection - Service Ticket Request Anomaly
+id: 1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+status: stable
+description: |
+  Detects anomalous Kerberos service ticket requests that may indicate Kerberoasting activity.
+  This rule identifies service accounts being accessed by users who don't typically request
+  tickets for those services, indicating potential reconnaissance or attack activity.
+
+references:
+  - https://attack.mitre.org/techniques/T1558/003/
+
+author: Purple Team Lab
+date: 2024/01/14
+
+tags:
+  - attack.credential_access
+  - attack.t1558.003
+
+logsource:
+  product: windows
+  service: security
+
+detection:
+  selection:
+    EventID: 4769
+    Status: '0x0'
+
+  # Service accounts with SPNs (high-value targets)
+  selection_target:
+    ServiceName|contains:
+      - 'svc_'
+      - 'service_'
+      - 'admin_'
+      - 'sql'
+      - 'http'
+      - 'ldap'
+
+  # Unusual ticket options
+  selection_options:
+    TicketOptions:
+      - '0x40810000'  # Forwardable, Renewable
+      - '0x40800000'  # Forwardable
+
+  filter_computers:
+    TargetUserName|endswith: '$'
+
+  condition: selection and selection_target and selection_options and not filter_computers
+
+falsepositives:
+  - Legitimate service access
+  - Service discovery by administrators
+  - Monitoring and inventory tools
+
+level: medium
+
+---
+
+title: Kerberoasting Attack Detection - PowerShell Request Service Ticket
+id: 2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e
+status: experimental
+description: |
+  Detects PowerShell-based Kerberoasting using the System.IdentityModel.Tokens.KerberosRequestorSecurityToken
+  class to request service tickets. This technique is commonly used by PowerShell-based Kerberoasting tools.
+
+references:
+  - https://attack.mitre.org/techniques/T1558/003/
+  - https://www.harmj0y.net/blog/powershell/kerberoasting-without-mimikatz/
+
+author: Purple Team Lab
+date: 2024/01/14
+
+tags:
+  - attack.credential_access
+  - attack.t1558.003
+  - attack.execution
+  - attack.t1059.001
+
+logsource:
+  product: windows
+  category: process_creation
+
+detection:
+  selection_powershell:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+
+  selection_kerberos_class:
+    CommandLine|contains:
+      - 'System.IdentityModel.Tokens.KerberosRequestorSecurityToken'
+      - 'Add-Type -AssemblyName System.IdentityModel'
+      - 'KerberosRequestorSecurityToken'
+      - 'GetRequest()'
+
+  condition: selection_powershell and selection_kerberos_class
+
+falsepositives:
+  - Legitimate PowerShell scripts for service authentication
+  - Security testing and auditing by authorized personnel
+
+level: high
+
+---
+
+title: Kerberoasting Attack Detection - Impacket GetUserSPNs
+id: 3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f
+status: stable
+description: |
+  Detects the use of Impacket's GetUserSPNs.py tool for Kerberoasting attacks from Linux systems.
+  This tool is commonly used by penetration testers and attackers to enumerate and request
+  service tickets for accounts with SPNs.
+
+references:
+  - https://attack.mitre.org/techniques/T1558/003/
+  - https://github.com/fortra/impacket
+
+author: Purple Team Lab
+date: 2024/01/14
+
+tags:
+  - attack.credential_access
+  - attack.t1558.003
+
+logsource:
+  product: windows
+  service: security
+
+detection:
+  # Unusual source IPs requesting multiple service tickets
+  selection:
+    EventID: 4769
+    Status: '0x0'
+    TicketEncryptionType: '0x17'
+
+  # Impacket often uses specific patterns
+  selection_impacket:
+    IpAddress|re: '^(?!.*172\.28\.0\.1[0-9]).*'  # Non-Windows endpoints
+
+  filter:
+    ServiceName|endswith:
+      - '$'
+      - 'krbtgt'
+
+  timeframe: 2m
+  condition: selection and selection_impacket and not filter | count(ServiceName) by IpAddress > 3
+
+falsepositives:
+  - Legitimate Linux systems authenticating to AD services
+  - Authorized penetration testing
+  - Security tools performing service enumeration
+
+level: high
+
+---
+
+title: Kerberoasting Attack Detection - Credential Dumping via Service Tickets
+id: 4d5e6f7a-8b9c-0d1e-2f3a-4b5c6d7e8f9a
+status: stable
+description: |
+  Detects potential credential dumping through Kerberoasting by correlating service ticket
+  requests with subsequent suspicious activity such as lateral movement or privilege escalation.
+
+references:
+  - https://attack.mitre.org/techniques/T1558/003/
+
+author: Purple Team Lab
+date: 2024/01/14
+
+tags:
+  - attack.credential_access
+  - attack.t1558.003
+  - attack.lateral_movement
+
+logsource:
+  product: windows
+  service: security
+
+detection:
+  # Stage 1: Service ticket request
+  selection_stage1:
+    EventID: 4769
+    Status: '0x0'
+    TicketEncryptionType: '0x17'
+
+  # Stage 2: Subsequent authentication using cracked credentials
+  selection_stage2:
+    EventID:
+      - 4624  # Successful logon
+      - 4648  # Logon with explicit credentials
+
+  # Correlation: Same source user, different target within 1 hour
+  timeframe: 1h
+  condition: selection_stage1 and selection_stage2
+
+falsepositives:
+  - Normal user behavior accessing multiple services
+  - Legitimate administrative activity
+
+level: medium
+
+# ============================================================================
+# CONVERSION EXAMPLES FOR DIFFERENT SIEMS
+# ============================================================================
+
+# SPLUNK SPL CONVERSION:
+# index=windows EventCode=4769 Status=0x0 TicketEncryptionType=0x17
+# | where NOT (like(ServiceName, "%$") OR ServiceName="krbtgt")
+# | stats count by TargetUserName, ServiceName, IpAddress, TicketEncryptionType
+# | where count > 5
+
+# ELASTICSEARCH QUERY DSL CONVERSION:
+# {
+#   "query": {
+#     "bool": {
+#       "must": [
+#         { "term": { "event.code": "4769" } },
+#         { "term": { "winlog.event_data.Status": "0x0" } },
+#         { "term": { "winlog.event_data.TicketEncryptionType": "0x17" } }
+#       ],
+#       "must_not": [
+#         { "wildcard": { "winlog.event_data.ServiceName": "*$" } },
+#         { "term": { "winlog.event_data.ServiceName": "krbtgt" } }
+#       ]
+#     }
+#   }
+# }
+
+# WAZUH OSSEC RULE CONVERSION: (See detection-rules/wazuh-rules/)

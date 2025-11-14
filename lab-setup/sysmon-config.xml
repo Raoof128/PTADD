@@ -1,0 +1,340 @@
+<!--
+  Purple Team AD Lab - Sysmon Configuration v14.0+
+  Optimized for Active Directory attack detection
+  Based on SwiftOnSecurity/sysmon-config with AD-specific enhancements
+
+  Events Captured:
+  - Process Creation (ID 1) - All processes for attack chain analysis
+  - Network Connections (ID 3) - C2, lateral movement, DCSync
+  - Process Access (ID 10) - LSASS access (Mimikatz, credential dumping)
+  - Image Loads (ID 7) - DLL injection, reflective loading
+  - Registry Modifications (ID 12-14) - Persistence mechanisms
+  - Pipe Events (ID 17-18) - Named pipes for C2 communication
+  - WMI Events (ID 19-21) - WMI-based attacks and persistence
+
+  Author: Purple Team Lab
+  Last Updated: 2024-01-14
+-->
+
+<Sysmon schemaversion="4.90">
+  <HashAlgorithms>md5,sha256,imphash</HashAlgorithms>
+  <CheckRevocation/>
+  <DnsLookup>True</DnsLookup>
+
+  <EventFiltering>
+
+    <!-- ============================================== -->
+    <!-- Event ID 1: Process Creation -->
+    <!-- Capture ALL process creation for attack analysis -->
+    <!-- ============================================== -->
+    <RuleGroup name="ProcessCreate" groupRelation="or">
+      <ProcessCreate onmatch="exclude">
+        <!-- Reduce noise from legitimate Windows processes -->
+        <!-- NOTE: For attack lab, we want MAXIMUM visibility -->
+        <!-- These exclusions are minimal compared to production -->
+
+        <!-- Exclude only high-frequency, low-value events -->
+        <Image condition="is">C:\Windows\System32\conhost.exe</Image>
+        <Image condition="is">C:\Windows\System32\svchost.exe</Image>
+
+        <!-- DO NOT exclude these common attack vectors:
+          - powershell.exe (used in 80%+ of AD attacks)
+          - cmd.exe (lateral movement, remote execution)
+          - wmic.exe (WMI attacks)
+          - net.exe (recon, user enumeration)
+          - tasklist.exe (process discovery)
+          - whoami.exe (privilege checks)
+          - rundll32.exe (LOLBin abuse)
+          - regsvr32.exe (script execution)
+          - mshta.exe (script execution)
+          - certutil.exe (file download, encoding)
+          - bitsadmin.exe (file transfer)
+          - msiexec.exe (lateral movement)
+        -->
+      </ProcessCreate>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 2: File Creation Time Changed -->
+    <!-- Detect timestomping (anti-forensics) -->
+    <!-- ============================================== -->
+    <RuleGroup name="FileCreateTime" groupRelation="or">
+      <FileCreateTime onmatch="include">
+        <TargetFilename condition="contains">\Windows\System32\</TargetFilename>
+        <TargetFilename condition="contains">\Windows\SysWOW64\</TargetFilename>
+        <TargetFilename condition="contains">\Users\</TargetFilename>
+        <TargetFilename condition="contains">\ProgramData\</TargetFilename>
+        <TargetFilename condition="contains">\Temp\</TargetFilename>
+      </FileCreateTime>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 3: Network Connection -->
+    <!-- Critical for C2 detection and lateral movement -->
+    <!-- ============================================== -->
+    <RuleGroup name="NetworkConnect" groupRelation="or">
+      <NetworkConnect onmatch="exclude">
+        <!-- Minimal exclusions for lab environment -->
+        <!-- Capture most network activity for analysis -->
+
+        <!-- Exclude localhost connections to reduce noise -->
+        <DestinationIp condition="is">127.0.0.1</DestinationIp>
+        <DestinationIp condition="is">::1</DestinationIp>
+
+        <!-- Include all PowerShell, SMB, WinRM, RDP connections -->
+        <!-- Include all Kerberos (88), LDAP (389), RPC (135) traffic -->
+      </NetworkConnect>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 5: Process Terminated -->
+    <!-- Track process lifecycle -->
+    <!-- ============================================== -->
+    <RuleGroup name="ProcessTerminate" groupRelation="or">
+      <ProcessTerminate onmatch="include">
+        <!-- Track termination of security tools -->
+        <Image condition="contains">defender</Image>
+        <Image condition="contains">MsMpEng</Image>
+        <Image condition="contains">antivirus</Image>
+
+        <!-- Track attack tool termination -->
+        <Image condition="contains">powershell</Image>
+        <Image condition="contains">mimikatz</Image>
+        <Image condition="contains">psexec</Image>
+      </ProcessTerminate>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 6: Driver Loaded -->
+    <!-- Detect rootkits and malicious drivers -->
+    <!-- ============================================== -->
+    <RuleGroup name="DriverLoad" groupRelation="or">
+      <DriverLoad onmatch="exclude">
+        <!-- Exclude signed Microsoft drivers -->
+        <Signature condition="contains">Microsoft Windows</Signature>
+        <Signature condition="contains">Microsoft Corporation</Signature>
+        <Signed condition="is">true</Signed>
+      </DriverLoad>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 7: Image (DLL) Loaded -->
+    <!-- Detect reflective DLL injection, PowerShell exploits -->
+    <!-- ============================================== -->
+    <RuleGroup name="ImageLoad" groupRelation="or">
+      <ImageLoad onmatch="include">
+        <!-- Suspicious DLL loads -->
+        <ImageLoaded condition="contains">\Temp\</ImageLoaded>
+        <ImageLoaded condition="contains">\AppData\</ImageLoaded>
+        <ImageLoaded condition="contains">\ProgramData\</ImageLoaded>
+
+        <!-- Security-relevant DLL loads -->
+        <ImageLoaded condition="contains">vaultcli.dll</ImageLoaded>
+        <ImageLoaded condition="contains">samlib.dll</ImageLoaded>
+        <ImageLoaded condition="contains">wdigest.dll</ImageLoaded>
+        <ImageLoaded condition="contains">kerberos.dll</ImageLoaded>
+
+        <!-- PowerShell module loads -->
+        <ImageLoaded condition="contains">System.Management.Automation</ImageLoaded>
+      </ImageLoad>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 8: CreateRemoteThread -->
+    <!-- Detect process injection (critical for Mimikatz detection) -->
+    <!-- ============================================== -->
+    <RuleGroup name="CreateRemoteThread" groupRelation="or">
+      <CreateRemoteThread onmatch="include">
+        <!-- Capture ALL remote thread creation -->
+        <!-- This is key indicator of credential dumping and injection -->
+      </CreateRemoteThread>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 9: RawAccessRead -->
+    <!-- Detect direct disk access (ransomware, forensics evasion) -->
+    <!-- ============================================== -->
+    <RuleGroup name="RawAccessRead" groupRelation="or">
+      <RawAccessRead onmatch="include">
+        <Device condition="contains">\Device\HarddiskVolume</Device>
+      </RawAccessRead>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 10: Process Access -->
+    <!-- CRITICAL: LSASS access (Mimikatz, credential dumping) -->
+    <!-- ============================================== -->
+    <RuleGroup name="ProcessAccess" groupRelation="or">
+      <ProcessAccess onmatch="include">
+        <!-- LSASS access - primary indicator of credential dumping -->
+        <TargetImage condition="is">C:\Windows\System32\lsass.exe</TargetImage>
+
+        <!-- Other security process access -->
+        <TargetImage condition="contains">svchost.exe</TargetImage>
+        <TargetImage condition="contains">csrss.exe</TargetImage>
+        <TargetImage condition="contains">winlogon.exe</TargetImage>
+        <TargetImage condition="contains">services.exe</TargetImage>
+      </ProcessAccess>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 11: File Created -->
+    <!-- Track suspicious file creation -->
+    <!-- ============================================== -->
+    <RuleGroup name="FileCreate" groupRelation="or">
+      <FileCreate onmatch="include">
+        <!-- Executable files in suspicious locations -->
+        <TargetFilename condition="end with">.exe</TargetFilename>
+        <TargetFilename condition="end with">.dll</TargetFilename>
+        <TargetFilename condition="end with">.ps1</TargetFilename>
+        <TargetFilename condition="end with">.bat</TargetFilename>
+        <TargetFilename condition="end with">.vbs</TargetFilename>
+        <TargetFilename condition="end with">.js</TargetFilename>
+
+        <!-- Credential files -->
+        <TargetFilename condition="contains">credential</TargetFilename>
+        <TargetFilename condition="contains">password</TargetFilename>
+        <TargetFilename condition="end with">.kirbi</TargetFilename>
+        <TargetFilename condition="end with">.ccache</TargetFilename>
+
+        <!-- NTDS.dit database files (DCSync indicators) -->
+        <TargetFilename condition="contains">ntds.dit</TargetFilename>
+        <TargetFilename condition="contains">SYSTEM</TargetFilename>
+        <TargetFilename condition="contains">SAM</TargetFilename>
+      </FileCreate>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 12, 13, 14: Registry Events -->
+    <!-- Detect persistence, GPO modifications, privilege escalation -->
+    <!-- ============================================== -->
+    <RuleGroup name="RegistryEvent" groupRelation="or">
+      <RegistryEvent onmatch="include">
+        <!-- Run keys (persistence) -->
+        <TargetObject condition="contains">CurrentVersion\Run</TargetObject>
+        <TargetObject condition="contains">CurrentVersion\RunOnce</TargetObject>
+
+        <!-- Service creation (persistence) -->
+        <TargetObject condition="contains">System\CurrentControlSet\Services</TargetObject>
+
+        <!-- LSA modifications -->
+        <TargetObject condition="contains">SYSTEM\CurrentControlSet\Control\Lsa</TargetObject>
+
+        <!-- Security provider modifications -->
+        <TargetObject condition="contains">SYSTEM\CurrentControlSet\Control\SecurityProviders</TargetObject>
+
+        <!-- Logon scripts -->
+        <TargetObject condition="contains">UserInitMprLogonScript</TargetObject>
+
+        <!-- WDigest credential caching (enable plaintext passwords) -->
+        <TargetObject condition="contains">WDigest</TargetObject>
+      </RegistryEvent>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 15: FileCreateStreamHash -->
+    <!-- Detect Alternate Data Streams (ADS) -->
+    <!-- ============================================== -->
+    <RuleGroup name="FileCreateStreamHash" groupRelation="or">
+      <FileCreateStreamHash onmatch="include">
+        <TargetFilename condition="contains">:</TargetFilename>
+      </FileCreateStreamHash>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 17, 18: Pipe Events -->
+    <!-- Detect named pipe creation (C2, lateral movement) -->
+    <!-- ============================================== -->
+    <RuleGroup name="PipeEvent" groupRelation="or">
+      <PipeEvent onmatch="include">
+        <!-- Common C2 and attack tool pipes -->
+        <PipeName condition="contains">msagent</PipeName>
+        <PipeName condition="contains">mojo</PipeName>
+        <PipeName condition="contains">psexec</PipeName>
+        <PipeName condition="contains">paexec</PipeName>
+        <PipeName condition="contains">remcom</PipeName>
+        <PipeName condition="contains">csexec</PipeName>
+        <PipeName condition="contains">isapi_http</PipeName>
+        <PipeName condition="contains">isapi_dg</PipeName>
+        <PipeName condition="contains">sdapi</PipeName>
+        <PipeName condition="contains">ahexec</PipeName>
+        <PipeName condition="contains">winsock</PipeName>
+        <PipeName condition="contains">rpcss</PipeName>
+      </PipeEvent>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 19, 20, 21: WMI Events -->
+    <!-- Detect WMI-based attacks and persistence -->
+    <!-- ============================================== -->
+    <RuleGroup name="WmiEvent" groupRelation="or">
+      <WmiEvent onmatch="include">
+        <!-- WMI Event Filters (persistence) -->
+        <EventNamespace condition="contains">root\subscription</EventNamespace>
+        <EventNamespace condition="contains">root\default</EventNamespace>
+
+        <!-- WMI Event Consumers -->
+        <Operation condition="contains">Created</Operation>
+        <Operation condition="contains">Modified</Operation>
+      </WmiEvent>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 22: DNS Query -->
+    <!-- Detect C2 DNS beaconing and data exfiltration -->
+    <!-- ============================================== -->
+    <RuleGroup name="DnsQuery" groupRelation="or">
+      <DnsQuery onmatch="exclude">
+        <!-- Exclude common Microsoft domains to reduce noise -->
+        <QueryName condition="end with">microsoft.com</QueryName>
+        <QueryName condition="end with">windows.com</QueryName>
+        <QueryName condition="end with">windowsupdate.com</QueryName>
+
+        <!-- Capture most DNS queries for C2 detection -->
+      </DnsQuery>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 23: File Delete -->
+    <!-- Track log deletion and evidence destruction -->
+    <!-- ============================================== -->
+    <RuleGroup name="FileDelete" groupRelation="or">
+      <FileDelete onmatch="include">
+        <!-- Log file deletion -->
+        <TargetFilename condition="contains">\Windows\System32\winevt\Logs\</TargetFilename>
+
+        <!-- Prefetch file deletion (anti-forensics) -->
+        <TargetFilename condition="contains">\Windows\Prefetch\</TargetFilename>
+
+        <!-- Security tool logs -->
+        <TargetFilename condition="contains">defender</TargetFilename>
+        <TargetFilename condition="contains">antivirus</TargetFilename>
+      </FileDelete>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 24, 25: Clipboard Events -->
+    <!-- Detect clipboard capture (data theft) -->
+    <!-- ============================================== -->
+    <RuleGroup name="ClipboardChange" groupRelation="or">
+      <ClipboardChange onmatch="include">
+        <Image condition="contains">powershell</Image>
+        <Image condition="contains">cmd.exe</Image>
+      </ClipboardChange>
+    </RuleGroup>
+
+    <!-- ============================================== -->
+    <!-- Event ID 26: File Delete Logged -->
+    <!-- Enhanced file deletion tracking -->
+    <!-- ============================================== -->
+    <RuleGroup name="FileDeleteDetected" groupRelation="or">
+      <FileDeleteDetected onmatch="include">
+        <TargetFilename condition="end with">.exe</TargetFilename>
+        <TargetFilename condition="end with">.dll</TargetFilename>
+        <TargetFilename condition="end with">.ps1</TargetFilename>
+        <TargetFilename condition="end with">.evtx</TargetFilename>
+      </FileDeleteDetected>
+    </RuleGroup>
+
+  </EventFiltering>
+</Sysmon>

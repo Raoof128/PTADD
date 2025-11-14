@@ -1,0 +1,290 @@
+version: '3.8'
+
+# Purple Team Active Directory Lab Environment
+# This docker-compose file defines an isolated AD environment for security testing
+# NOTE: Windows Server containers require Windows Server host or hybrid approach
+# For full AD lab functionality, consider VirtualBox/Hyper-V alternative (see lab-setup/DEPLOYMENT_OPTIONS.md)
+
+networks:
+  ad_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
+    internal: false  # Set to true for complete isolation after initial setup
+
+volumes:
+  dc_data:
+  workstation1_data:
+  workstation2_data:
+  wazuh_data:
+  wazuh_logs:
+
+services:
+  # ====================================================================
+  # DOMAIN CONTROLLER (Windows Server 2019/2022)
+  # ====================================================================
+  # Note: This requires Windows containers. For Linux hosts, see VirtualBox setup
+  # For testing purposes, you can use Samba AD DC as alternative (linux-based)
+
+  domain-controller:
+    image: samba-ad-dc:latest  # Custom image - see lab-setup/build-samba-dc.sh
+    container_name: ptadd-dc01
+    hostname: DC01
+    networks:
+      ad_network:
+        ipv4_address: 172.28.0.10
+    ports:
+      - "389:389"    # LDAP
+      - "636:636"    # LDAPS
+      - "88:88"      # Kerberos
+      - "464:464"    # Kerberos password change
+      - "53:53"      # DNS
+      - "53:53/udp"
+      - "445:445"    # SMB
+      - "135:135"    # RPC
+      - "3389:3389"  # RDP (for management)
+    environment:
+      - DOMAIN=PURPLETEAM.LAB
+      - REALM=PURPLETEAM.LAB
+      - ADMINPASS=P@ssw0rd123!  # INTENTIONALLY WEAK - FOR LAB ONLY
+      - DNS_FORWARDER=8.8.8.8
+      - SETUP_VULNERABLE_CONFIG=true
+    volumes:
+      - dc_data:/var/lib/samba
+      - ./lab-setup/dc-setup.sh:/scripts/dc-setup.sh
+      - ./lab-setup/vulnerable-accounts.json:/config/vulnerable-accounts.json
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "samba-tool", "domain", "info", "127.0.0.1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ====================================================================
+  # WORKSTATION 1 - Windows 10 Enterprise (Domain Joined)
+  # ====================================================================
+  workstation1:
+    image: windows-10-enterprise:latest  # Custom image with Sysmon pre-installed
+    container_name: ptadd-ws01
+    hostname: WS01
+    networks:
+      ad_network:
+        ipv4_address: 172.28.0.20
+    environment:
+      - DOMAIN_JOIN=PURPLETEAM.LAB
+      - DC_IP=172.28.0.10
+      - COMPUTER_NAME=WS01
+      - ADMIN_USER=Administrator
+      - ADMIN_PASS=P@ssw0rd123!
+      - SYSMON_CONFIG=/config/sysmon-config.xml
+      - DISABLE_DEFENDER=true  # INTENTIONAL - For attack simulation
+    volumes:
+      - workstation1_data:/data
+      - ./lab-setup/sysmon-config.xml:/config/sysmon-config.xml:ro
+      - ./lab-setup/ws-setup.ps1:/scripts/ws-setup.ps1:ro
+    depends_on:
+      - domain-controller
+    dns:
+      - 172.28.0.10
+      - 8.8.8.8
+    restart: unless-stopped
+
+  # ====================================================================
+  # WORKSTATION 2 - Windows 10 Enterprise (Domain Joined)
+  # ====================================================================
+  workstation2:
+    image: windows-10-enterprise:latest
+    container_name: ptadd-ws02
+    hostname: WS02
+    networks:
+      ad_network:
+        ipv4_address: 172.28.0.21
+    environment:
+      - DOMAIN_JOIN=PURPLETEAM.LAB
+      - DC_IP=172.28.0.10
+      - COMPUTER_NAME=WS02
+      - ADMIN_USER=Administrator
+      - ADMIN_PASS=P@ssw0rd123!
+      - SYSMON_CONFIG=/config/sysmon-config.xml
+      - DISABLE_DEFENDER=true
+    volumes:
+      - workstation2_data:/data
+      - ./lab-setup/sysmon-config.xml:/config/sysmon-config.xml:ro
+      - ./lab-setup/ws-setup.ps1:/scripts/ws-setup.ps1:ro
+    depends_on:
+      - domain-controller
+    dns:
+      - 172.28.0.10
+      - 8.8.8.8
+    restart: unless-stopped
+
+  # ====================================================================
+  # ATTACKER WORKSTATION (Kali Linux)
+  # ====================================================================
+  attacker:
+    image: kalilinux/kali-rolling:latest
+    container_name: ptadd-attacker
+    hostname: kali-attacker
+    networks:
+      ad_network:
+        ipv4_address: 172.28.0.50
+    environment:
+      - DISPLAY=:0
+    volumes:
+      - ./attack-scripts:/opt/attack-scripts
+      - ./results/attack-evidence:/opt/evidence
+      - ./lab-setup/attacker-setup.sh:/scripts/attacker-setup.sh
+    dns:
+      - 172.28.0.10
+      - 8.8.8.8
+    privileged: true
+    command: >
+      bash -c "
+        apt-get update &&
+        apt-get install -y kerberos-clients impacket-scripts bloodhound python3-ldap3 python3-impacket smbclient crackmapexec &&
+        /scripts/attacker-setup.sh &&
+        tail -f /dev/null
+      "
+    restart: unless-stopped
+
+  # ====================================================================
+  # WAZUH SIEM (Security Monitoring & Log Analysis)
+  # ====================================================================
+  wazuh-manager:
+    image: wazuh/wazuh-manager:4.7.0
+    container_name: ptadd-wazuh-manager
+    hostname: wazuh-manager
+    networks:
+      ad_network:
+        ipv4_address: 172.28.0.100
+    ports:
+      - "1514:1514"     # Agent communication
+      - "1515:1515"     # Agent enrollment
+      - "514:514/udp"   # Syslog
+      - "55000:55000"   # API
+    environment:
+      - INDEXER_URL=https://wazuh-indexer:9200
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=SecretPassword
+      - FILEBEAT_SSL_VERIFICATION_MODE=none
+    volumes:
+      - wazuh_data:/var/ossec/data
+      - wazuh_logs:/var/ossec/logs
+      - ./detection-rules/wazuh-rules:/var/ossec/etc/rules:ro
+      - ./lab-setup/wazuh-config.xml:/wazuh-config-mount/wazuh-config.xml:ro
+    restart: unless-stopped
+
+  wazuh-indexer:
+    image: wazuh/wazuh-indexer:4.7.0
+    container_name: ptadd-wazuh-indexer
+    hostname: wazuh-indexer
+    networks:
+      ad_network:
+        ipv4_address: 172.28.0.101
+    ports:
+      - "9200:9200"
+    environment:
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "discovery.type=single-node"
+      - "bootstrap.memory_lock=true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - wazuh_data:/var/lib/wazuh-indexer
+    restart: unless-stopped
+
+  wazuh-dashboard:
+    image: wazuh/wazuh-dashboard:4.7.0
+    container_name: ptadd-wazuh-dashboard
+    hostname: wazuh-dashboard
+    networks:
+      ad_network:
+        ipv4_address: 172.28.0.102
+    ports:
+      - "443:5601"
+    environment:
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=SecretPassword
+      - WAZUH_API_URL=https://wazuh-manager:55000
+      - API_USERNAME=wazuh-wui
+      - API_PASSWORD=SecretPassword
+    depends_on:
+      - wazuh-indexer
+      - wazuh-manager
+    restart: unless-stopped
+
+  # ====================================================================
+  # ELASTICSEARCH (For Sigma Rule Testing - Optional)
+  # ====================================================================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: ptadd-elasticsearch
+    hostname: elasticsearch
+    networks:
+      ad_network:
+        ipv4_address: 172.28.0.110
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+    volumes:
+      - ./results/logs:/logs:ro
+    restart: unless-stopped
+
+  # ====================================================================
+  # SPLUNK (Alternative SIEM - Optional, Resource Intensive)
+  # ====================================================================
+  # Uncomment if you want to use Splunk instead of Wazuh
+  # splunk:
+  #   image: splunk/splunk:latest
+  #   container_name: ptadd-splunk
+  #   hostname: splunk
+  #   networks:
+  #     ad_network:
+  #       ipv4_address: 172.28.0.120
+  #   ports:
+  #     - "8000:8000"   # Web UI
+  #     - "8088:8088"   # HEC
+  #     - "9997:9997"   # Forwarder
+  #   environment:
+  #     - SPLUNK_START_ARGS=--accept-license
+  #     - SPLUNK_PASSWORD=P@ssw0rd123!
+  #   volumes:
+  #     - ./detection-rules/splunk-apps:/opt/splunk/etc/apps
+  #     - ./results/logs:/logs:ro
+  #   restart: unless-stopped
+
+# ====================================================================
+# DEPLOYMENT NOTES
+# ====================================================================
+# 1. Windows containers require Windows Server host or WSL2 with Windows containers
+# 2. For Linux hosts, use VirtualBox/Hyper-V alternative (see lab-setup/DEPLOYMENT_OPTIONS.md)
+# 3. Samba AD DC provides Linux-based AD alternative for testing
+# 4. Ensure 16GB+ RAM for full lab deployment
+# 5. Network isolation: Set ad_network.internal=true after initial setup
+# 6. All credentials are INTENTIONALLY WEAK for educational purposes only
+
+# ====================================================================
+# QUICK START
+# ====================================================================
+# 1. Build custom images: cd lab-setup && ./build-images.sh
+# 2. Start infrastructure: docker-compose up -d
+# 3. Verify DC: docker-compose exec domain-controller samba-tool domain info 127.0.0.1
+# 4. Access Wazuh: https://localhost:443 (admin:SecretPassword)
+# 5. Run attacks: docker-compose exec attacker bash
+# 6. Monitor logs: docker-compose logs -f wazuh-manager
