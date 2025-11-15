@@ -2,8 +2,15 @@
 
 [![MITRE ATT&CK](https://img.shields.io/badge/MITRE%20ATT%26CK-v14.1-red)](https://attack.mitre.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python)](requirements.txt)
+[![PowerShell](https://img.shields.io/badge/PowerShell-7.0%2B-blue?logo=powershell)](https://github.com/PowerShell/PowerShell)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)](docker-compose.yml)
-[![Sigma Rules](https://img.shields.io/badge/Sigma-Detection%20Rules-orange)](detection-rules/sigma-rules/)
+[![Sigma Rules](https://img.shields.io/badge/Sigma-25%2B%20Rules-orange)](detection-rules/sigma-rules/)
+[![Detection Coverage](https://img.shields.io/badge/Detection%20Coverage-96.2%25-success)](documentation/DETECTION_MATRIX.md)
+[![ACSC Essential 8](https://img.shields.io/badge/ACSC-Essential%208-green)](https://www.cyber.gov.au/resources-business-and-government/essential-cyber-security/essential-eight)
+[![Code of Conduct](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
+[![Security Policy](https://img.shields.io/badge/Security-Policy-red)](SECURITY.md)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 > **Enterprise-grade Purple Team cybersecurity lab demonstrating offensive and defensive Active Directory security techniques for professional portfolio and academic research.**
 
@@ -508,6 +515,58 @@ This Purple Team lab was developed as part of my Master's Cybersecurity portfoli
 **Timeframe**: 4 weeks of development (infrastructure, attacks, detection, documentation)
 **Technologies**: Docker, PowerShell, Python, Wazuh, Sysmon, Sigma, Active Directory
 **Purpose**: Professional portfolio and PhD research preparation
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! This project follows professional open-source standards:
+
+### How to Contribute
+
+1. **Read the Guidelines**: See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines
+2. **Code of Conduct**: All contributors must adhere to our [Code of Conduct](CODE_OF_CONDUCT.md)
+3. **Security Policy**: Review [SECURITY.md](SECURITY.md) for vulnerability reporting
+4. **Fork & Create PR**: Fork the repository, make changes, and submit a pull request
+
+### What We're Looking For
+
+- 🎯 New MITRE ATT&CK technique implementations
+- 🔍 Detection rule improvements and tuning
+- 🛡️ Hardening script enhancements
+- 📚 Documentation improvements
+- 🐛 Bug fixes and performance optimizations
+- 🧪 Testing and validation enhancements
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/PTADD.git
+cd PTADD
+
+# Install Python dependencies
+pip install -r requirements.txt
+pip install -r requirements-dev.txt  # Development tools
+
+# Install pre-commit hooks (recommended)
+pip install pre-commit
+pre-commit install
+
+# Validate your setup
+chmod +x lab-setup/validate-lab.sh
+./lab-setup/validate-lab.sh
+```
+
+### Contribution Standards
+
+- ✅ All code must pass validation (`./lab-setup/validate-lab.sh`)
+- ✅ Python code follows PEP 8 style guide
+- ✅ PowerShell code follows best practices
+- ✅ Detection rules use Sigma format
+- ✅ Documentation updated for all changes
+- ✅ CHANGELOG.md updated
+- ✅ No sensitive data committed
 
 ---
 

@@ -1,0 +1,42 @@
+# Purple Team Active Directory Attack & Defence Lab
+# Python Dependencies
+
+# Core Attack Framework
+impacket>=0.11.0              # Network protocol implementations for AD attacks
+ldap3>=2.9.1                  # LDAP v3 protocol client for AD enumeration
+
+# Cryptography & Hashing
+pycryptodome>=3.19.0          # Cryptographic functions for Kerberos
+pyasn1>=0.5.0                 # ASN.1 parsing for Kerberos tickets
+
+# Network & Protocol Libraries
+dnspython>=2.4.0              # DNS toolkit for AD discovery
+pysmb>=1.2.9                  # SMB/CIFS protocol implementation
+
+# Data Processing
+PyYAML>=6.0.1                 # YAML parsing for Sigma rules and configs
+jinja2>=3.1.2                 # Template engine for report generation
+
+# Development & Testing
+pylint>=3.0.0                 # Code quality analysis
+flake8>=6.1.0                 # Style guide enforcement
+pytest>=7.4.0                 # Testing framework
+pytest-cov>=4.1.0             # Coverage reporting
+
+# Sigma Rule Management
+pysigma>=0.10.0               # Sigma rule processing
+pysigma-backend-elasticsearch>=1.0.0  # Elasticsearch backend for Sigma
+
+# Logging & Monitoring
+python-json-logger>=2.0.7     # JSON logging formatter
+colorlog>=6.7.0               # Colored logging output
+
+# Optional: BloodHound Data Collection
+# bloodhound>=1.6.1           # Uncomment for BloodHound Python ingestor
+
+# Optional: Password Cracking Integration
+# hashcat-utils>=1.9          # Uncomment for hashcat integration
+
+# Documentation Generation (Optional)
+# mkdocs>=1.5.3               # Documentation site generator
+# mkdocs-material>=9.4.0      # Material theme for MkDocs

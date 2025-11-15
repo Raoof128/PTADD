@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 GitHub Discussions
+    url: https://github.com/yourusername/PTADD/discussions
+    about: Ask questions, share ideas, and discuss the project with the community
+  - name: 📖 Documentation
+    url: https://github.com/yourusername/PTADD#documentation
+    about: Read comprehensive documentation including attack playbook and detection matrix
+  - name: 🔒 Security Advisory
+    url: https://github.com/yourusername/PTADD/security/advisories/new
+    about: Report security vulnerabilities privately (recommended for critical issues)
+  - name: 📧 Direct Contact
+    url: mailto:security@yourdomain.com
+    about: Email for security concerns or sensitive matters

@@ -1,0 +1,97 @@
+# Git attributes for PTADD repository
+# Ensures consistent line endings and proper diff handling
+
+# Auto-detect text files and normalize line endings to LF
+* text=auto eol=lf
+
+# Explicitly declare text files
+*.md text
+*.txt text
+*.json text
+*.yml text
+*.yaml text
+*.xml text
+*.sh text
+*.bash text
+*.py text
+*.ps1 text
+*.psm1 text
+*.psd1 text
+
+# Ensure shell scripts use LF (required for Linux/Docker)
+*.sh text eol=lf
+*.bash text eol=lf
+
+# PowerShell scripts can use CRLF (Windows compatibility)
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
+
+# Documentation files
+*.md text diff=markdown
+README* text
+LICENSE text
+CHANGELOG* text
+CONTRIBUTING* text
+SECURITY* text
+
+# Configuration files
+.gitignore text
+.gitattributes text
+.editorconfig text
+docker-compose.yml text
+Dockerfile text
+
+# Binary files (no conversion, no diff)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+
+# Kerberos tickets and dumps (binary, should be in .gitignore anyway)
+*.kirbi binary
+*.dmp binary
+*.bin binary
+
+# Archives
+*.tar.gz binary
+*.tgz binary
+
+# Git LFS (Large File Storage) - if needed in future
+# *.dmp filter=lfs diff=lfs merge=lfs -text
+# *.kirbi filter=lfs diff=lfs merge=lfs -text
+
+# Language-specific diff patterns
+*.py diff=python
+*.ps1 diff=powershell
+*.md diff=markdown
+*.json diff=json
+
+# Export-ignore (files not included in git archive)
+.gitattributes export-ignore
+.gitignore export-ignore
+.editorconfig export-ignore
+.github/ export-ignore
+*.md export-ignore
+.git* export-ignore
+
+# Linguist language detection overrides (for GitHub stats)
+*.ps1 linguist-language=PowerShell
+*.py linguist-language=Python
+*.yml linguist-language=YAML
+*.yaml linguist-language=YAML
+documentation/** linguist-documentation
+*.md linguist-documentation
+
+# Treat certain paths as vendored (exclude from language stats)
+# lab-setup/sysmon-config.xml linguist-vendored

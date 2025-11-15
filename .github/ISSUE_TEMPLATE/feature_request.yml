@@ -1,0 +1,91 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: "[FEATURE]: "
+labels: ["enhancement"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please provide details below.
+
+  - type: dropdown
+    id: feature-type
+    attributes:
+      label: Feature Type
+      description: What type of feature are you proposing?
+      options:
+        - New Attack Technique
+        - Detection Rule Enhancement
+        - Hardening Improvement
+        - Infrastructure Enhancement
+        - Documentation Improvement
+        - Testing/Validation Tool
+        - New Deployment Option
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature Description
+      description: Describe the feature you'd like to see
+      placeholder: I would like to add...
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: How would this benefit the project and community?
+      placeholder: This would help with... / This would enable...
+    validations:
+      required: true
+
+  - type: textarea
+    id: mitre-mapping
+    attributes:
+      label: MITRE ATT&CK Mapping
+      description: If applicable, provide MITRE ATT&CK technique details
+      value: |
+        - **Technique ID**: [e.g., T1558.005]
+        - **Technique Name**: [e.g., Kerberos Delegation Attacks]
+        - **Tactic**: [e.g., Credential Access, Lateral Movement]
+      render: markdown
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Proposed Implementation
+      description: If you have ideas on how to implement this, share them here
+      placeholder: |
+        This could be implemented by...
+        - Script would use...
+        - Detection would monitor...
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative approaches?
+      placeholder: Other options could be...
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information, links, or references
+      placeholder: Related resources, similar implementations, etc.
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you like to contribute this feature?
+      options:
+        - label: I am willing to implement this feature and submit a PR
+        - label: I can help with testing and validation
+        - label: I can contribute documentation

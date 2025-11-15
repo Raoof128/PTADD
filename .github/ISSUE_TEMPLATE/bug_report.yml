@@ -1,0 +1,115 @@
+name: Bug Report
+description: Report a bug or issue with the lab
+title: "[BUG]: "
+labels: ["bug", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the information below to help us diagnose and fix the issue.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component is affected?
+      options:
+        - Infrastructure (Docker, networking)
+        - Attack Scripts
+        - Detection Rules
+        - Hardening Scripts
+        - Documentation
+        - Wazuh SIEM
+        - Domain Controller
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of the bug
+      placeholder: What went wrong?
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Information about your environment
+      value: |
+        - **OS**: [e.g., Ubuntu 22.04, macOS Sonoma, Windows 11]
+        - **Docker Version**: [e.g., 24.0.7]
+        - **Docker Compose Version**: [e.g., 2.23.0]
+        - **RAM**: [e.g., 16GB]
+        - **Deployment Method**: [Docker Compose / VirtualBox / Hyper-V / Cloud]
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the bug
+      placeholder: |
+        1. Deploy lab with `docker-compose up -d`
+        2. Execute attack script `python3 attack-scripts/kerberoasting.py ...`
+        3. Observe error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should have happened?
+      placeholder: The attack script should successfully enumerate SPN accounts and request TGS tickets
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: Script crashed with "Connection refused" error
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and Error Messages
+      description: Paste relevant logs, error messages, or screenshots
+      placeholder: |
+        ```
+        Paste logs here
+        ```
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information that might be helpful
+      placeholder: This only happens when... / I've tried... / etc.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm before submitting
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: I have run `./lab-setup/validate-lab.sh` and it passed
+          required: false
+        - label: This is a bug in the lab, not intentional educational behavior
+          required: true
+        - label: I have included all relevant logs and error messages
+          required: true

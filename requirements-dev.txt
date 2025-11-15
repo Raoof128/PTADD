@@ -1,0 +1,51 @@
+# Development Dependencies for PTADD
+# Install with: pip install -r requirements-dev.txt
+
+# Include base requirements
+-r requirements.txt
+
+# Code Quality & Linting
+pylint>=3.0.0                 # Static code analysis
+flake8>=6.1.0                 # PEP 8 style guide enforcement
+black>=23.11.0                # Code formatter
+isort>=5.12.0                 # Import sorting
+mypy>=1.7.0                   # Static type checking
+bandit>=1.7.5                 # Security issue scanner
+
+# Testing Frameworks
+pytest>=7.4.0                 # Unit testing framework
+pytest-cov>=4.1.0             # Coverage plugin for pytest
+pytest-mock>=3.12.0           # Mocking plugin for pytest
+pytest-xdist>=3.5.0           # Parallel test execution
+coverage>=7.3.0               # Code coverage measurement
+
+# Documentation
+mkdocs>=1.5.3                 # Documentation site generator
+mkdocs-material>=9.4.0        # Material theme for MkDocs
+mkdocs-include-markdown-plugin>=6.0.0  # Include markdown plugin
+pymdown-extensions>=10.3      # Extensions for Python Markdown
+
+# Pre-commit Hooks
+pre-commit>=3.5.0             # Git pre-commit hook framework
+
+# Development Tools
+ipython>=8.17.0               # Enhanced Python interactive shell
+ipdb>=0.13.13                 # IPython debugger
+rich>=13.7.0                  # Rich text and beautiful formatting
+
+# Sigma Rule Development
+sigma-cli>=0.7.0              # Sigma CLI for rule management
+pySigma>=0.10.0               # Sigma rule processing library
+pySigma-backend-elasticsearch>=1.0.0
+pySigma-backend-splunk>=1.0.0
+pySigma-backend-qradar>=0.2.0
+
+# Security Analysis
+safety>=2.3.0                 # Dependency vulnerability scanner
+pip-audit>=2.6.0              # Audit Python packages for vulnerabilities
+
+# Build & Distribution (for future packaging)
+build>=1.0.0                  # PEP 517 build frontend
+twine>=4.0.0                  # Package upload to PyPI
+setuptools>=69.0.0            # Package development
+wheel>=0.42.0                 # Built-package format

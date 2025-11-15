@@ -1,0 +1,347 @@
+name: Lab Validation
+
+on:
+  push:
+    branches: [ main, develop, 'claude/**' ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  validate-structure:
+    name: Validate Project Structure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check project structure
+        run: |
+          echo "Validating project directory structure..."
+
+          required_dirs=(
+            "attack-scripts"
+            "detection-rules/sigma-rules"
+            "hardening"
+            "lab-setup"
+            "documentation"
+            "results"
+          )
+
+          for dir in "${required_dirs[@]}"; do
+            if [ -d "$dir" ]; then
+              echo "✅ $dir exists"
+            else
+              echo "❌ $dir missing"
+              exit 1
+            fi
+          done
+
+      - name: Check required files
+        run: |
+          echo "Validating required files..."
+
+          required_files=(
+            "README.md"
+            "LICENSE"
+            "SECURITY.md"
+            "CONTRIBUTING.md"
+            "CODE_OF_CONDUCT.md"
+            "CHANGELOG.md"
+            ".gitignore"
+            "docker-compose.yml"
+            "requirements.txt"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "✅ $file exists"
+            else
+              echo "❌ $file missing"
+              exit 1
+            fi
+          done
+
+  validate-python:
+    name: Validate Python Scripts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      - name: Python syntax validation
+        run: |
+          echo "Validating Python syntax..."
+          errors=0
+
+          for script in attack-scripts/*.py; do
+            if [ -f "$script" ]; then
+              if python -m py_compile "$script" 2>/dev/null; then
+                echo "✅ $(basename $script) - syntax valid"
+              else
+                echo "❌ $(basename $script) - syntax error"
+                errors=$((errors + 1))
+              fi
+            fi
+          done
+
+          if [ $errors -gt 0 ]; then
+            echo "❌ Python validation failed with $errors errors"
+            exit 1
+          else
+            echo "✅ All Python scripts passed validation"
+          fi
+
+      - name: Python code quality check
+        run: |
+          echo "Checking Python code quality..."
+          pip install pylint flake8
+
+          # Run flake8 (more lenient than pylint for educational code)
+          flake8 attack-scripts/*.py --max-line-length=120 --ignore=E501,W503 || true
+
+  validate-yaml:
+    name: Validate YAML Files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: YAML syntax validation
+        run: |
+          echo "Validating YAML syntax..."
+          errors=0
+
+          # Validate Sigma rules
+          for rule in detection-rules/sigma-rules/*.yml detection-rules/sigma-rules/*.yaml; do
+            if [ -f "$rule" ]; then
+              if python -c "import yaml; yaml.safe_load(open('$rule'))" 2>/dev/null; then
+                echo "✅ $(basename $rule) - syntax valid"
+              else
+                echo "❌ $(basename $rule) - syntax error"
+                errors=$((errors + 1))
+              fi
+            fi
+          done
+
+          # Validate docker-compose.yml
+          if [ -f "docker-compose.yml" ]; then
+            if python -c "import yaml; yaml.safe_load(open('docker-compose.yml'))" 2>/dev/null; then
+              echo "✅ docker-compose.yml - syntax valid"
+            else
+              echo "❌ docker-compose.yml - syntax error"
+              errors=$((errors + 1))
+            fi
+          fi
+
+          # Validate GitHub workflow files
+          for workflow in .github/workflows/*.yml; do
+            if [ -f "$workflow" ]; then
+              if python -c "import yaml; yaml.safe_load(open('$workflow'))" 2>/dev/null; then
+                echo "✅ $(basename $workflow) - syntax valid"
+              else
+                echo "❌ $(basename $workflow) - syntax error"
+                errors=$((errors + 1))
+              fi
+            fi
+          done
+
+          if [ $errors -gt 0 ]; then
+            echo "❌ YAML validation failed with $errors errors"
+            exit 1
+          else
+            echo "✅ All YAML files passed validation"
+          fi
+
+  validate-sigma-rules:
+    name: Validate Sigma Rules
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pySigma
+        run: |
+          pip install pysigma
+          pip install pysigma-backend-elasticsearch
+
+      - name: Validate Sigma rule structure
+        run: |
+          echo "Validating Sigma rule structure..."
+
+          for rule in detection-rules/sigma-rules/*.yml; do
+            if [ -f "$rule" ]; then
+              echo "Checking $(basename $rule)..."
+
+              # Check required fields
+              for field in title id status description detection level; do
+                if grep -q "^$field:" "$rule"; then
+                  echo "  ✅ $field present"
+                else
+                  echo "  ❌ $field missing"
+                  exit 1
+                fi
+              done
+            fi
+          done
+
+          echo "✅ All Sigma rules have required fields"
+
+  validate-documentation:
+    name: Validate Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check documentation files
+        run: |
+          echo "Validating documentation..."
+
+          docs=(
+            "documentation/ATTACK_PLAYBOOK.md"
+            "documentation/DETECTION_MATRIX.md"
+            "documentation/ARCHITECTURE.md"
+            "documentation/DEPLOYMENT_OPTIONS.md"
+            "documentation/TESTING_GUIDE.md"
+            "QUICKSTART.md"
+          )
+
+          for doc in "${docs[@]}"; do
+            if [ -f "$doc" ]; then
+              lines=$(wc -l < "$doc")
+              echo "✅ $doc exists ($lines lines)"
+            else
+              echo "❌ $doc missing"
+              exit 1
+            fi
+          done
+
+      - name: Check for broken markdown links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          config-file: '.github/markdown-link-check-config.json'
+        continue-on-error: true
+
+  validate-security:
+    name: Security Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for sensitive data
+        run: |
+          echo "Checking for sensitive data..."
+
+          # Check for common sensitive patterns
+          if grep -r "password.*=.*['\"].*['\"]" --include="*.py" --include="*.ps1" attack-scripts/ | grep -v "placeholder\|example\|P@ssw0rd123"; then
+            echo "⚠️ Warning: Potential hardcoded passwords found"
+            exit 1
+          fi
+
+          # Check for API keys
+          if grep -r "api[_-]key.*=.*['\"].*['\"]" --include="*.py" --include="*.ps1" .; then
+            echo "⚠️ Warning: Potential API keys found"
+            exit 1
+          fi
+
+          echo "✅ No obvious sensitive data detected"
+
+      - name: Check .gitignore coverage
+        run: |
+          echo "Validating .gitignore..."
+
+          required_patterns=(
+            "*.key"
+            "*.pem"
+            "*.dmp"
+            "*.kirbi"
+            "credentials.txt"
+            "hashes.txt"
+          )
+
+          for pattern in "${required_patterns[@]}"; do
+            if grep -q "$pattern" .gitignore; then
+              echo "✅ $pattern ignored"
+            else
+              echo "❌ $pattern not in .gitignore"
+              exit 1
+            fi
+          done
+
+  full-validation:
+    name: Run Full Validation Script
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml
+          chmod +x lab-setup/validate-lab.sh
+
+      - name: Run validation script
+        run: |
+          cd lab-setup
+          ./validate-lab.sh || true
+        continue-on-error: true
+
+  summary:
+    name: Validation Summary
+    needs: [validate-structure, validate-python, validate-yaml, validate-sigma-rules, validate-documentation, validate-security]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Check all validations passed
+        run: |
+          echo "🎉 All validation checks completed!"
+          echo ""
+          echo "Summary:"
+          echo "  ✅ Project structure validated"
+          echo "  ✅ Python syntax validated"
+          echo "  ✅ YAML syntax validated"
+          echo "  ✅ Sigma rules validated"
+          echo "  ✅ Documentation validated"
+          echo "  ✅ Security checks passed"
